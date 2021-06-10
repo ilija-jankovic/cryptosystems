@@ -1,6 +1,8 @@
 import random
 import math
 
+from numpy.lib.function_base import append
+
 def gcd(m, n):
     while True:
         r = m%n
@@ -129,7 +131,6 @@ class Person:
 
         self.create_rsa_keys(p, q, d)
 
-
     def create_rsa_keys(self, p, q, d):
         print(f"{self.name} is creating rsa key values...")
         assert is_prime(p) and is_prime(q), "p and q must be prime"
@@ -174,6 +175,61 @@ def crack_rsa_with_public_key(c, public_rsa_key):
             d = inverse(e, phi)
             return (int)(pow(c, d, n))
 
+def to_lower_alphabet_only(text):
+    assert type(m) == str, "text must be a string"
+    return ''.join(filter(str.isalpha, text.lower()))
+
+def vigenere_encrypt(m, k):
+    assert type(m) == str, "m must be a string"
+    print(f"vigenere shifting message\n\'{m}\'\nwith key", k, "...")
+    c = ""
+    m_size = len(m)
+    k_size = len(k)
+    for i in range(0, m_size, k_size):
+        for j in range(0, k_size):
+            i_next = (k.index(j)+1) % k_size
+            c += m[min(i+k[i_next], len(m)-1)]
+    return c
+
+def vigenere_decrypt(c, k):
+    assert type(c) == str, "c must be a string"
+    #change key direction from right to left
+    k = list(k)
+    for i in range(1, len(k)):
+        i_end = len(k) - i
+        if i == i_end:
+            break
+        t = k[i]
+        k[i] = k[i_end]
+        k[i_end] = t
+        if i_end-i == 1:
+            break
+    return vigenere_encrypt(c, tuple(k))
+
+def find_frequencies(c):
+    assert type(c) == str, "c must be a string"
+    frequencies = []
+    for ch in c:
+        i = frequencies.index(ch) if ch in frequencies else None
+        if i != None:
+            frequencies[i+1] += 1
+        else:
+            frequencies.append(ch)
+            frequencies.append(1)
+    return frequencies
+
+def ic_english(c):
+    c = to_lower_alphabet_only(c)
+    print(f"calculating the IC of\n\'{c}\'\nbased on the english language...\n")
+
+    frequencies = find_frequencies(c)
+    ic = 0
+    for i in range(0, len(frequencies), 2):
+        f = frequencies[i+1]
+        ic += f**2
+    ic -= 1.0/26.0
+    return ic / (len(c)*(len(c)-1))
+
 #alice = Person("Alice")
 #bob = Person("Bob")
 
@@ -189,5 +245,7 @@ def crack_rsa_with_public_key(c, public_rsa_key):
 m = crack_rsa_with_public_key(41802438, (58687709 , 270679))
 
 print(f"the cracked message is \'{m}\'\n")
+
+print(vigenere_decrypt(vigenere_encrypt("abcdefghijklmnopqrstuvwxyz", (2,3,1,4,0)), (2,3,1,4,0)))
 
 #bob.create_rsa_keys(3, 7, 11)
