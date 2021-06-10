@@ -1,15 +1,13 @@
 import random
 import math
 
-#primality test from 2 + sqrt(n) (inclusive)
-def is_prime(n):
-    if(n <= 1):
-        return False
-    #int cast is significantly faster than floor
-    for i in range(4, (int)(math.sqrt(n)) + 1):
-        if n%i == 0:
-            return False
-    return True
+def gcd(m, n):
+    while True:
+        r = m%n
+        if r == 0:
+            return n
+        m = n
+        n = r
 
 def co_prime(m, n):
     min_num = min(m,n)
@@ -19,9 +17,62 @@ def co_prime(m, n):
             return False
     return True
 
+def is_perfect_power(n):
+    for i in range(0, math.log2(n)):
+        if n%i == 0:
+            return True
+    return False
+
+def ord(a, n):
+    assert n > 1, "the modulus n must be greater than 0"
+    k = 1
+    while True:
+        if pow(a, k, n) == 1:
+            return k
+        k += 1
+
+def totient(n):
+    sum = 0
+    n_div_2pi = 2*math.pi/n
+    for i in range(1, n+1):
+        sum += gcd(i, n) * math.cos(i*n_div_2pi)
+    return (int)(sum)
+
 def totient_primes(p, q):
     assert is_prime(p) and is_prime(q), "p and q must be prime for phi's special case phi(pq) = (p-1)(q-1)"
     return (p-1)*(q-1)
+
+#Miller-Rabin primality test
+#Only need to test a = 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, and 37 for n < 2^64 for a guaranteed prime.
+#This is sufficient as it is the size of an unsigned integer.
+a_vals = [2,3,5,7,11,13,17,19,23,29,31]
+def is_prime(n):
+    if n <= 2:
+        return n > 1
+    if n%2 == 0:
+        return False
+
+    n_off = n - 1
+    s = 1
+    while True:
+        d = n_off / pow(2, s)
+        d_floor = (int)(d)
+        if d - d_floor == 0 and d_floor%2 == 1:
+            d = d_floor
+            break
+        s += 1
+
+    for a in a_vals:
+        if n <= a:
+            return True
+        if pow(a, d, n) == 1:
+            return True
+        for r in range(0, s):
+            if pow(a, pow(2, r)*d, n) == (-1)%n:
+                return True
+        return False
+
+
 
 #extended_euclidian algorithm
 def inverse(a, n):
@@ -29,7 +80,7 @@ def inverse(a, n):
     #precaution
     a %= n
 
-    #gcd step
+    #gcd steps + 1
     co_effs = []
     r_vals = []
     n_gcd = n
@@ -116,25 +167,27 @@ def crack_rsa_with_public_key(c, public_rsa_key):
     print(f"cracking cyphertext \'{c}\' with public RSA key", public_rsa_key, "...")
     n = public_rsa_key[0]
     e = public_rsa_key[1]
-    for p in range(2, n):
-        if is_prime(p):
-            for q in range(2, p+1):
-                if is_prime(q) and n//q == p:
-                    phi = totient_primes(p, q)
-                    d = inverse(e, phi)
-                    return (int)(pow(c, d, n))
+    for p in range(2, (int)(math.sqrt(n)) + 1):
+        if is_prime(p) and n%p==0:
+            q = n//p
+            phi = totient_primes(p, q)
+            d = inverse(e, phi)
+            return (int)(pow(c, d, n))
 
-alice = Person("Alice")
-bob = Person("Bob")
+#alice = Person("Alice")
+#bob = Person("Bob")
 
-alice.generate_rsa_keys()
-bob.create_rsa_keys(3, 7, 11)
+#for i in range(0, 100): print(i, is_prime(i))
 
-c = alice.encrypt_rsa(12, bob)
+#alice.generate_rsa_keys()
+#bob.generate_rsa_keys()
+
+#alice.send_rsa(12, bob)
+
+#c = alice.encrypt_rsa(12, bob)
 #m = crack_rsa_with_public_key(c, bob.public_rsa_key)
 m = crack_rsa_with_public_key(41802438, (58687709 , 270679))
 
 print(f"the cracked message is \'{m}\'\n")
-
 
 #bob.create_rsa_keys(3, 7, 11)
