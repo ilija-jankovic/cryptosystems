@@ -1,9 +1,12 @@
 import random
+import math
 
+#primality test from 2 + sqrt(n) (inclusive)
 def is_prime(n):
     if(n <= 1):
         return False
-    for i in range(2, n//2 + 1):
+    #int cast is significantly faster than floor
+    for i in range(4, (int)(math.sqrt(n)) + 1):
         if n%i == 0:
             return False
     return True
@@ -25,8 +28,6 @@ def inverse(a, n):
     assert n > 0, "the modulus n must be greater than 0"
     #precaution
     a %= n
-
-    print(a, n)
 
     #gcd step
     co_effs = []
@@ -59,8 +60,8 @@ class Person:
         self.name = name
 
     #proof of concept for random keys
-    def generate_RSA_keys(self):
-        print(f"{self.name} is generating RSA keys...")
+    def generate_rsa_keys(self):
+        print(f"{self.name} is generating rsa keys...")
         primes = []
         for i in range(5, 200):
             if(is_prime(i)):
@@ -75,11 +76,11 @@ class Person:
             if(co_prime(d, phi) and inverse(d, phi) != -1):
                 break
 
-        self.create_RSA_keys(p, q, d)
+        self.create_rsa_keys(p, q, d)
 
 
-    def create_RSA_keys(self, p, q, d):
-        print(f"{self.name} is creating RSA key values...")
+    def create_rsa_keys(self, p, q, d):
+        print(f"{self.name} is creating rsa key values...")
         assert is_prime(p) and is_prime(q), "p and q must be prime"
         phi = totient_primes(p, q)
         assert d < phi and co_prime(d, phi), "d must be smaller than and coprime to phi(pq)"
@@ -89,33 +90,51 @@ class Person:
 
         self.public_rsa_key = (n, e)
         self.__private_rsa_key = (p, q, d)
-        print(f"Public RSA key: ", self.public_rsa_key)
-        print(f"Private RSA key: ", self.__private_rsa_key, "\n")
+        print(f"Public rsa key: ", self.public_rsa_key)
+        print(f"Private rsa key: ", self.__private_rsa_key, "\n")
 
-    def __encrypt_RSA(self, m, person):
-        print("encrypting...\n")
-        return (int)(pow(m, person.public_rsa_key[1])) % person.public_rsa_key[0]
+    def encrypt_rsa(self, m, receiver):
+        assert m > 0 and m < receiver.public_rsa_key[0], "message must be greater or equal to 0 less than n in the receiver's public rsa key"
+        print(f"encrypting \'{m}\'...\n")
+        return (int)(pow(m, receiver.public_rsa_key[1], receiver.public_rsa_key[0]))
 
-    def __decrypt_RSA(self, c):
-        print("decrypting...\n")
-        return (int)(pow(c, self.__private_rsa_key[2])) % self.public_rsa_key[0]
+    def decrypt_rsa(self, c):
+        print(f"decrypting {c} ...\n")
+        return (int)(pow(c, self.__private_rsa_key[2], self.public_rsa_key[0]))
 
-    def send_RSA(self, m, receiver):
-        assert m >= 0 and m < receiver.public_rsa_key[0], "message must be greater or equal to 0 less than n in the receiver's public RSA key"
+    def send_rsa(self, m, receiver):
         print(f'{self.name} is sending the message \'{m}\' to {receiver.name}...')
-        c = self.__encrypt_RSA(m, receiver)
-        receiver.receive_RSA(c)
+        c = self.encrypt_rsa(m, receiver)
+        receiver.receive_rsa(c)
 
-    def receive_RSA(self, c):
+    def receive_rsa(self, c):
         print(f'{self.name} received cyphertext \'{c}\'!')
-        d = self.__decrypt_RSA(c)
+        d = self.decrypt_rsa(c)
         print(f'the message reads \'{d}\'\n')
+
+def crack_rsa_with_public_key(c, public_rsa_key):
+    print(f"cracking cyphertext \'{c}\' with public RSA key", public_rsa_key, "...")
+    n = public_rsa_key[0]
+    e = public_rsa_key[1]
+    for p in range(2, n):
+        if is_prime(p):
+            for q in range(2, p+1):
+                if is_prime(q) and n//q == p:
+                    phi = totient_primes(p, q)
+                    d = inverse(e, phi)
+                    return (int)(pow(c, d, n))
 
 alice = Person("Alice")
 bob = Person("Bob")
 
-alice.generate_RSA_keys()
-bob.generate_RSA_keys()
-#bob.create_RSA_keys(3, 7, 11)
+alice.generate_rsa_keys()
+bob.create_rsa_keys(3, 7, 11)
 
-alice.send_RSA(57, bob)
+c = alice.encrypt_rsa(12, bob)
+#m = crack_rsa_with_public_key(c, bob.public_rsa_key)
+m = crack_rsa_with_public_key(41802438, (58687709 , 270679))
+
+print(f"the cracked message is \'{m}\'\n")
+
+
+#bob.create_rsa_keys(3, 7, 11)
